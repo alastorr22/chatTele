@@ -1,6 +1,15 @@
 import React from "react";
 import { useState, useEffect } from "react";
-import { doc, setDoc, getFirestore, addDoc,collection} from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  getFirestore,
+  addDoc,
+  collection,
+  getDocs,
+  onSnapshot,
+  query,
+} from "firebase/firestore";
 import {
   FirebaseAppProvider,
   FirestoreProvider,
@@ -28,7 +37,23 @@ function App() {
   const [nuevoMensaje, setNuevoMensaje] = useState("");
   const [mensajes, setMensajes] = useState([]);
 
+  const [data, setData] = useState([]);
+
   const [values, setValues] = useState(initialStateValues);
+
+  useEffect(() => {
+    const collectionRef = collection(firestore, "usuario");
+    const q = query(collectionRef);
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const mensajes = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setData(mensajes);
+    });
+    return () => unsubscribe();
+  }, [firestore]);
 
   useEffect(() => {
     socket.on("connect", () => setIsConnected(true));
@@ -51,6 +76,7 @@ function App() {
       await addDoc(collectionRef, values);
 
       console.log("Datos guardados en Firestore con éxito");
+      window.location.reload();
     } catch (error) {
       console.error("Error al guardar datos en Firestore:", error);
     }
@@ -79,7 +105,7 @@ function App() {
         <div className="mensaje">
           <h3>Nombre de Usuario: {nombreUsuario}</h3>
           <UlMensajes>
-            {mensajes.map((mensaje) => (
+            {data.map((mensaje) => (
               <LiMensaje key={mensaje.id}>
                 {mensaje.usuario}: {mensaje.mensaje}
               </LiMensaje>
